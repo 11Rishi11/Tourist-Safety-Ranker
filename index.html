@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tourist Safety Ranker — India</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root {
+    --bg: #5B564C;
+    --bg-deep: #4A4640;
+    --panel: #EFE8D8;
+    --panel-raised: #F7F2E6;
+    --rule: #C8BC9E;
+    --rule-faint: #DED3B7;
+    --ink: #2B2013;
+    --ink-soft: #6B5F45;
+    --ink-faint: #9C8F73;
+    --text-light: #F2ECDD;
+    --text-muted: #C9C0AC;
+    --marigold: #E0A340;
+    --marigold-deep: #C98A29;
+    --jade: #5A8B75;
+    --ochre: #C99A3F;
+    --rust: #C2624A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Work Sans', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-light);
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+  }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--marigold);
+    outline-offset: 2px;
+  }
+
+  .hero {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 52px 24px 8px;
+    text-align: left;
+  }
+  .hero .kicker {
+    font-size: 0.85em;
+    color: var(--marigold);
+    margin: 0 0 14px;
+    font-family: 'Work Sans', sans-serif;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    line-height: 1.15;
+    margin: 0 0 16px;
+    color: var(--text-light);
+  }
+  .hero p {
+    font-size: 1.05em;
+    line-height: 1.6;
+    color: var(--text-muted);
+    max-width: 58ch;
+    margin: 0 0 8px;
+  }
+
+  .legend {
+    max-width: 760px;
+    margin: 18px auto 0;
+    padding: 0 24px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82em;
+    color: var(--text-muted);
+  }
+  .legend-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* ---- Map: the primary navigation surface ---- */
+  #map-section {
+    max-width: 960px;
+    margin: 26px auto 0;
+    padding: 0 24px;
+  }
+  #map-hint {
+    font-size: 0.88em;
+    color: var(--text-muted);
+    margin: 0 0 10px;
+  }
+  #map-frame {
+    background: var(--bg-deep);
+    border: 1px solid #3E3A34;
+    border-radius: 6px;
+    padding: 6px;
+  }
+  #map {
+    height: 460px;
+    border-radius: 3px;
+    background: var(--bg-deep);
+  }
+  .leaflet-container { background: var(--bg-deep) !important; }
+
+  #state-search-wrap {
+    max-width: 960px;
+    margin: 14px auto 0;
+    padding: 0 24px;
+  }
+  #state-search {
+    background: var(--panel-raised);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 9px 12px;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.9em;
+    width: 100%;
+    max-width: 320px;
+  }
+  #state-search::placeholder { color: var(--ink-faint); }
+
+  #breadcrumb {
+    max-width: 960px;
+    margin: 20px auto 0;
+    padding: 0 24px;
+    color: var(--text-muted);
+    font-size: 0.95em;
+    font-style: italic;
+  }
+  #breadcrumb span {
+    color: var(--marigold);
+    cursor: pointer;
+    font-style: normal;
+  }
+  #breadcrumb span:hover,
+  #breadcrumb span:focus-visible { text-decoration: underline; }
+
+  #controls-row {
+    max-width: 960px;
+    margin: 12px auto 0;
+    padding: 0 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  #controls { display: flex; align-items: center; gap: 10px; }
+  #controls label { color: var(--text-muted); font-size: 0.9em; }
+  #sort-select {
+    background: var(--panel-raised);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.9em;
+  }
+
+  .section-heading {
+    max-width: 960px;
+    margin: 26px auto 0;
+    padding: 0 24px 10px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 2px solid var(--text-light);
+  }
+  .section-heading h2 { font-size: 1.25em; color: var(--text-light); margin: 0; }
+  .section-heading .count { font-size: 0.85em; color: var(--text-muted); white-space: nowrap; }
+
+  /* ---- Fallback state list (shown alongside map for accessibility / search results) ---- */
+  #states-list-panel {
+    max-width: 960px;
+    margin: 0 auto 60px;
+    padding: 0 24px;
+  }
+  .state-chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .state-chip {
+    background: var(--panel-raised);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 0.86em;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .state-chip:hover, .state-chip:focus-visible {
+    background: var(--marigold);
+    color: var(--ink);
+    border-color: var(--marigold);
+  }
+
+  /* ---- Cities: ticket-style cards ---- */
+  #cities-container {
+    max-width: 960px;
+    margin: 12px auto 60px;
+    padding: 0 24px;
+    display: grid;
+    gap: 14px;
+  }
+  .city-card {
+    background: var(--panel-raised);
+    border: 1px solid var(--rule-faint);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    overflow: hidden;
+    text-align: left;
+    font-family: inherit;
+    width: 100%;
+  }
+  .ticket-stub {
+    flex: 0 0 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 8px;
+    gap: 8px;
+    border-right: 2px dashed var(--rule);
+  }
+  .rank-number { font-size: 0.78em; color: var(--ink-faint); font-weight: 600; }
+  .score-seal {
+    width: 46px; height: 46px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 600; font-size: 1.05em; font-family: 'Fraunces', serif;
+  }
+  .score-seal.jade { background: var(--jade); }
+  .score-seal.ochre { background: var(--ochre); }
+  .score-seal.rust { background: var(--rust); }
+
+  .ticket-body { flex: 1; padding: 16px 20px; min-width: 0; }
+  .ticket-body h2 { margin: 0 0 6px; font-size: 1.2em; color: var(--ink); }
+  .ticket-body p { margin: 2px 0; color: var(--ink-soft); font-size: 0.88em; }
+  .data-tag {
+    display: inline-block; margin-top: 8px; font-size: 0.72em;
+    padding: 2px 8px; border-radius: 3px;
+    background: var(--rule-faint); color: var(--ink-soft);
+  }
+  .data-tag.real { background: #DCE9E1; color: var(--jade); }
+  .expand-hint {
+    font-size: 0.78em; color: var(--ink-faint); margin-top: 6px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .expand-hint .chevron { display: inline-block; transition: transform 0.2s ease; }
+  .city-card[aria-expanded="true"] .chevron { transform: rotate(90deg); }
+
+  .attractions-panel {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    background: var(--rule-faint);
+  }
+  .attractions-panel.open { max-height: 340px; overflow-y: auto; }
+  .attractions-inner { padding: 16px 20px 18px 40px; }
+  .attractions-inner h3 { margin: 0 0 10px; font-size: 0.95em; color: var(--ink); }
+  .route-list { margin: 0; padding: 0; list-style: none; position: relative; }
+  .route-list li { position: relative; padding: 0 0 12px 22px; color: var(--ink-soft); font-size: 0.92em; }
+  .route-list li::before {
+    content: ''; position: absolute; left: 0; top: 5px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--marigold-deep);
+  }
+  .route-list li::after {
+    content: ''; position: absolute; left: 3px; top: 13px; bottom: -4px; width: 1px;
+    background: var(--rule);
+  }
+  .route-list li:last-child::after { display: none; }
+
+  #loading, #error {
+    text-align: center; padding: 30px 24px; color: var(--text-muted);
+    max-width: 960px; margin: 0 auto;
+  }
+
+  @media (max-width: 560px) {
+    #map { height: 340px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <p class="kicker">An atlas of safety and popularity</p>
+  <h1>Where in India is it safe to wander?</h1>
+  <p>Click a state on the map, browse its cities ranked by safety and popularity, then see the places worth visiting in each one. Covers all 28 states and 8 union territories — 104 cities in total.</p>
+</div>
+
+<div class="legend">
+  <span class="legend-item"><span class="legend-dot" style="background:#5A8B75"></span>Safer (7+)</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#C99A3F"></span>Moderate (5-7)</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#C2624A"></span>Use caution (below 5)</span>
+</div>
+
+<div id="map-section">
+  <p id="map-hint">Click any state to see its cities. You can also search below.</p>
+  <div id="map-frame"><div id="map"></div></div>
+</div>
+
+<div id="state-search-wrap">
+  <input type="text" id="state-search" placeholder="Or search for a state by name...">
+</div>
+
+<div id="breadcrumb" style="display:none;"><span id="crumb-states" tabindex="0" role="button">All states</span></div>
+
+<div id="controls-row" style="display:none;">
+  <div id="controls">
+    <label for="sort-select">Sort by</label>
+    <select id="sort-select">
+      <option value="popularity_score_desc">Popularity, high to low</option>
+      <option value="popularity_score_asc">Popularity, low to high</option>
+      <option value="safety_rank_score">Overall safety rank</option>
+      <option value="crime_score_asc">Crime rate, low to high</option>
+      <option value="crime_score_desc">Crime rate, high to low</option>
+    </select>
+  </div>
+</div>
+
+<div class="section-heading" id="section-heading" style="display:none;">
+  <h2 id="section-heading-text">Choose a state</h2>
+  <span class="count" id="section-count"></span>
+</div>
+
+<div id="states-list-panel">
+  <p id="loading">Fetching state data...</p>
+</div>
+
+<div id="cities-container" style="display:none;"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+  const API_BASE = 'http://127.0.0.1:5000';
+  // Public India state-boundary GeoJSON (used widely in open mapping tutorials/demos)
+  const INDIA_GEOJSON_URL = 'https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson';
+
+  const map = L.map('map', { zoomControl: true }).setView([22.5, 80], 4.6);
+
+  let markers = [];
+  let currentCities = [];
+  let allStates = [];
+  let stateLayer = null;
+  const placesCache = {};
+
+  const statesListPanel = document.getElementById('states-list-panel');
+  const citiesContainer = document.getElementById('cities-container');
+  const controlsRow = document.getElementById('controls-row');
+  const stateSearch = document.getElementById('state-search');
+  const breadcrumb = document.getElementById('breadcrumb');
+  const sectionHeading = document.getElementById('section-heading');
+  const sectionHeadingText = document.getElementById('section-heading-text');
+  const sectionCount = document.getElementById('section-count');
+
+  function scoreTier(score) {
+    if (score >= 7) return 'jade';
+    if (score >= 5) return 'ochre';
+    return 'rust';
+  }
+  function tierColor(tier) {
+    return { jade: '#5A8B75', ochre: '#C99A3F', rust: '#C2624A' }[tier];
+  }
+
+  // Normalizes state names so our DB names match whatever the GeoJSON calls them
+  function normalize(name) {
+    return name.toLowerCase().replace(/[^a-z]/g, '');
+  }
+
+  function clearMarkers() {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+  }
+
+  function plotCitiesOnMap(cities) {
+    clearMarkers();
+    const bounds = [];
+    cities.forEach((city, index) => {
+      if (!city.latitude || !city.longitude) return;
+      const tier = scoreTier(city.safety_rank_score);
+      const marker = L.circleMarker([city.latitude, city.longitude], {
+        radius: 9,
+        fillColor: tierColor(tier),
+        color: '#2B2013',
+        weight: 1,
+        fillOpacity: 0.95
+      }).addTo(map);
+      marker.bindPopup(`
+        <strong>#${index + 1} ${city.name}</strong><br>
+        Safety score: ${city.safety_rank_score}<br>
+        Crime rate: ${city.crime_score}<br>
+        Popularity: ${city.popularity_score} lakh FTAs
+      `);
+      markers.push(marker);
+      bounds.push([city.latitude, city.longitude]);
+    });
+    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
+  }
+
+  // ---------------- LOAD STATES + GEOJSON MAP ----------------
+
+  async function loadStates() {
+    try {
+      const res = await fetch(`${API_BASE}/api/states`);
+      if (!res.ok) throw new Error('Network response was not ok');
+      allStates = await res.json();
+      renderStateChips(allStates);
+      loadIndiaMap();
+    } catch (err) {
+      statesListPanel.innerHTML = `<p id="error">Couldn't load states. Make sure app.py is running at ${API_BASE}.</p>`;
+      console.error(err);
+    }
+  }
+
+  function renderStateChips(states) {
+    statesListPanel.innerHTML = '<div class="state-chip-grid" id="chip-grid"></div>';
+    const grid = document.getElementById('chip-grid');
+    if (!states.length) {
+      grid.innerHTML = '<p style="color:var(--text-muted)">No states match your search.</p>';
+      return;
+    }
+    states.forEach(s => {
+      const chip = document.createElement('button');
+      chip.className = 'state-chip';
+      chip.textContent = `${s.state} (${s.city_count})`;
+      chip.addEventListener('click', () => loadCitiesForState(s.state));
+      grid.appendChild(chip);
+    });
+  }
+
+  stateSearch.addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = allStates.filter(s => s.state.toLowerCase().includes(q));
+    renderStateChips(filtered);
+  });
+
+  async function loadIndiaMap() {
+    try {
+      const res = await fetch(INDIA_GEOJSON_URL);
+      if (!res.ok) throw new Error('GeoJSON fetch failed');
+      const geo = await res.json();
+
+      const stateCityCount = {};
+      allStates.forEach(s => stateCityCount[normalize(s.state)] = s);
+
+      stateLayer = L.geoJSON(geo, {
+        style: (feature) => {
+          const propName = feature.properties.st_nm || feature.properties.name || feature.properties.NAME_1 || '';
+          const match = stateCityCount[normalize(propName)];
+          return {
+            fillColor: match ? '#E0A340' : '#8A8272',
+            fillOpacity: match ? 0.55 : 0.25,
+            color: '#2B2013',
+            weight: 1
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const propName = feature.properties.st_nm || feature.properties.name || feature.properties.NAME_1 || '';
+          const match = stateCityCount[normalize(propName)];
+
+          layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.8 }));
+          layer.on('mouseout', () => layer.setStyle({ fillOpacity: match ? 0.55 : 0.25 }));
+
+          if (match) {
+            layer.bindTooltip(`${match.state} — ${match.city_count} cities`, { sticky: true });
+            layer.on('click', () => loadCitiesForState(match.state));
+          } else {
+            layer.bindTooltip(propName, { sticky: true });
+          }
+        }
+      }).addTo(map);
+
+      map.fitBounds(stateLayer.getBounds(), { padding: [10, 10] });
+    } catch (err) {
+      // If the public GeoJSON can't be reached, the clickable state chips below still work fine.
+      console.error('Could not load India state boundaries:', err);
+      document.getElementById('map-hint').textContent =
+        'Map boundaries unavailable right now — use the search list below to pick a state.';
+    }
+  }
+
+  function showStatesView() {
+    citiesContainer.style.display = 'none';
+    controlsRow.style.display = 'none';
+    breadcrumb.style.display = 'none';
+    sectionHeading.style.display = 'none';
+    statesListPanel.style.display = 'block';
+    stateSearch.value = '';
+    renderStateChips(allStates);
+    if (stateLayer) {
+      stateLayer.eachLayer(l => l.setStyle({ fillOpacity: 0.55 }));
+      map.fitBounds(stateLayer.getBounds(), { padding: [10, 10] });
+    }
+  }
+
+  // ---------------- CITIES VIEW ----------------
+
+  async function loadCitiesForState(stateName) {
+    citiesContainer.innerHTML = '<p id="loading">Fetching cities...</p>';
+    citiesContainer.style.display = 'grid';
+    controlsRow.style.display = 'flex';
+    breadcrumb.style.display = 'block';
+    sectionHeading.style.display = 'flex';
+    statesListPanel.style.display = 'none';
+    sectionHeadingText.textContent = `Cities in ${stateName}`;
+
+    breadcrumb.innerHTML = `<span id="crumb-states" tabindex="0" role="button">All states</span> &rsaquo; ${stateName}`;
+    document.getElementById('crumb-states').addEventListener('click', showStatesView);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/states/${encodeURIComponent(stateName)}/cities`);
+      if (!res.ok) throw new Error('Network response was not ok');
+      currentCities = await res.json();
+      sectionCount.textContent = `${currentCities.length} ${currentCities.length === 1 ? 'city' : 'cities'}`;
+      document.getElementById('sort-select').value = 'popularity_score_desc';
+      renderCities(currentCities);
+      plotCitiesOnMap(currentCities);
+    } catch (err) {
+      citiesContainer.innerHTML = `<p id="error">Couldn't load cities for ${stateName}.</p>`;
+      console.error(err);
+    }
+  }
+
+  function sortCities(cities, sortBy) {
+    const sorted = [...cities];
+    switch (sortBy) {
+      case 'crime_score_asc': sorted.sort((a, b) => a.crime_score - b.crime_score); break;
+      case 'crime_score_desc': sorted.sort((a, b) => b.crime_score - a.crime_score); break;
+      case 'popularity_score_asc': sorted.sort((a, b) => a.popularity_score - b.popularity_score); break;
+      case 'safety_rank_score': sorted.sort((a, b) => b.safety_rank_score - a.safety_rank_score); break;
+      default: sorted.sort((a, b) => b.popularity_score - a.popularity_score);
+    }
+    return sorted;
+  }
+
+  function renderCities(cities) {
+    citiesContainer.innerHTML = '';
+    cities.forEach((city, index) => {
+      const card = document.createElement('button');
+      card.className = 'city-card';
+      card.setAttribute('aria-expanded', 'false');
+
+      const tier = scoreTier(city.safety_rank_score);
+      const tagClass = city.data_source === 'Estimated' ? 'data-tag' : 'data-tag real';
+
+      card.innerHTML = `
+        <div class="ticket-stub">
+          <span class="rank-number">No. ${index + 1}</span>
+          <div class="score-seal ${tier}">${city.safety_rank_score}</div>
+        </div>
+        <div class="ticket-body">
+          <h2>${city.name}</h2>
+          <p>Popularity ${city.popularity_score} lakh FTA &middot; Crime rate ${city.crime_score}</p>
+          <span class="${tagClass}">${city.data_source}</span>
+          <p class="expand-hint"><span class="chevron">&rsaquo;</span> Places to visit</p>
+        </div>
+      `;
+
+      const panel = document.createElement('div');
+      panel.className = 'attractions-panel';
+      panel.innerHTML = `
+        <div class="attractions-inner">
+          <h3>Worth visiting in ${city.name}</h3>
+          <ul class="route-list"><li>Loading...</li></ul>
+        </div>
+      `;
+
+      const wrapper = document.createElement('div');
+      wrapper.appendChild(card);
+      wrapper.appendChild(panel);
+      wrapper.style.marginBottom = '2px';
+
+      card.addEventListener('click', () => togglePlaces(card, panel, city));
+      citiesContainer.appendChild(wrapper);
+    });
+  }
+
+  async function togglePlaces(card, panel, city) {
+    const isOpening = !panel.classList.contains('open');
+    panel.classList.toggle('open');
+    card.setAttribute('aria-expanded', String(isOpening));
+    if (!isOpening) return;
+
+    const ul = panel.querySelector('.route-list');
+    if (placesCache[city.id]) {
+      renderPlaces(ul, placesCache[city.id]);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/cities/${city.id}/places`);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const data = await res.json();
+      placesCache[city.id] = data;
+      renderPlaces(ul, data);
+    } catch (err) {
+      ul.innerHTML = '<li>Could not load places right now.</li>';
+      console.error(err);
+    }
+  }
+
+  function renderPlaces(ul, data) {
+    if (!data.has_real_data || !data.places.length) {
+      ul.innerHTML = '<li>Coming soon - attraction data not yet added for this city.</li>';
+      return;
+    }
+    ul.innerHTML = data.places.map(p => `<li>${p}</li>`).join('');
+  }
+
+  document.getElementById('sort-select').addEventListener('change', (e) => {
+    renderCities(sortCities(currentCities, e.target.value));
+  });
+
+  loadStates();
+</script>
+
+</body>
+</html>
